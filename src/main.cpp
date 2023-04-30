@@ -59,14 +59,14 @@ struct ProgramState {
     bool CameraMouseMovementUpdateEnabled = true;
 
 
-    glm::vec3 backpackPosition = glm::vec3(0.0f);
-    float backpackScale = 1.0f;
+    glm::vec3 Sunposition = glm::vec3(0.0f);
+    float SunScale = 1.0f;
 
 
 
     PointLight pointLight;
     ProgramState()
-            : camera(glm::vec3(0.0f, 2.0f, 10.0f)) {}
+            : camera(glm::vec3(0.0f, 2.0f, 6.0f)) {}
 
     void SaveToFile(std::string filename);
 
@@ -79,6 +79,9 @@ void ProgramState::SaveToFile(std::string filename) {
         << clearColor.g << '\n'
         << clearColor.b << '\n'
         << ImGuiEnabled << '\n'
+        << camera.Position.x << '\n'
+        << camera.Position.y << '\n'
+        << camera.Position.z << '\n'
         << camera.Front.x << '\n'
         << camera.Front.y << '\n'
         << camera.Front.z << '\n';
@@ -91,6 +94,9 @@ void ProgramState::LoadFromFile(std::string filename) {
            >> clearColor.g
            >> clearColor.b
            >> ImGuiEnabled
+           >> camera.Position.x
+           >> camera.Position.y
+           >> camera.Position.z
            >> camera.Front.x
            >> camera.Front.y
            >> camera.Front.z;
@@ -257,6 +263,13 @@ int main() {
     glCullFace(GL_BACK);
 
 
+
+
+    // build and compile shaders
+    // -------------------------
+    Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
+    Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
+
     // skybox VAO
     unsigned int skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
@@ -279,36 +292,57 @@ int main() {
     };
     unsigned int cubemapTexture = loadCubemap(faces);
 
-    // build and compile shaders
-    // -------------------------
-    Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
-    Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
-
     // load models
     // -----------
-    Model ourModel("resources/objects/backpack/backpack.obj");
-    ourModel.SetShaderTextureNamePrefix("material.");
+    Model Sunce("resources/objects/Sun/Sun.obj");
+    Sunce.SetShaderTextureNamePrefix("material.");
+
+    Model Zemlja("resources/objects/Earth/Planets-EARTH.obj");
+    Zemlja.SetShaderTextureNamePrefix("material.");
+
+    Model Mercury("resources/objects/Mercury/Mercury.obj");
+    Mercury.SetShaderTextureNamePrefix("material.");
+
+    Model Venus("resources/objects/Venus/Venus.obj");
+    Venus.SetShaderTextureNamePrefix("material.");
+
+    Model Mars("resources/objects/Mars/Mars.obj");
+    Mars.SetShaderTextureNamePrefix("material.");
+
+    Model Moon("resources/objects/Moon/Moon.obj");
+    Moon.SetShaderTextureNamePrefix("material.");
 
     // light later change
     PointLight& pointLight = programState->pointLight;
-    pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
-    pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
-    pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
+    pointLight.position = glm::vec3(0, 5 , 0.0);
+    pointLight.ambient = glm::vec3(1, 1, 1);
+    pointLight.diffuse = glm::vec3(1, 1, 1);
     pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
 
-    pointLight.constant = 1.0f;
-    pointLight.linear = 0.09f;
-    pointLight.quadratic = 0.032f;
+    pointLight.constant = 1;
+    pointLight.linear = 0.1;
+    pointLight.quadratic = 0.1;
+
+    PointLight& Centar = programState->pointLight;
+    Centar.position = glm::vec3(0, 5 , 0.0);
+    Centar.ambient = glm::vec3(1, 1, 1);
+    Centar.diffuse = glm::vec3(1, 1, 1);
+    Centar.specular = glm::vec3(1.0, 1.0, 1.0);
+
+    Centar.constant = 1;
+    Centar.linear = 0;
+    Centar.quadratic = 0;
 
 
+    skyboxShader.use();
+    skyboxShader.setInt("skybox", 0);
 
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     // Shader conf.
 
-    skyboxShader.use();
-    skyboxShader.setInt("skybox", 0);
+
 
     // render loop
     // -----------
@@ -328,15 +362,41 @@ int main() {
         // ------
         glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
-                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
-        glm::mat4 view = programState->camera.GetViewMatrix();
 
 
 
         // will change later
         ourShader.use();
-        pointLight.position = glm::vec3(4.0 * cos(currentFrame), 4.0f, 4.0 * sin(currentFrame));
+
+        Centar.position = glm::vec3(0, 5, 0);
+        ourShader.setVec3("pointLight.position", Centar.position);
+        ourShader.setVec3("pointLight.ambient", Centar.ambient);
+        ourShader.setVec3("pointLight.diffuse", Centar.diffuse);
+        ourShader.setVec3("pointLight.specular", Centar.specular);
+        ourShader.setFloat("pointLight.constant", Centar.constant);
+        ourShader.setFloat("pointLight.linear", Centar.linear);
+        ourShader.setFloat("pointLight.quadratic", Centar.quadratic);
+        ourShader.setVec3("viewPosition", programState->camera.Position);
+        ourShader.setFloat("material.shininess", 256.0f);
+
+        // view/projection transformations
+        glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
+                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 view = programState->camera.GetViewMatrix();
+        ourShader.setMat4("projection", projection);
+        ourShader.setMat4("view", view);
+
+
+
+        // render the loaded model --- will change later
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model,
+                               programState->Sunposition); // translate it down so it's at the center of the scene
+        model = glm::scale(model, glm::vec3(1,1,1));    // it's a bit too big for our scene, so scale it down
+        ourShader.setMat4("model", model);
+        Sunce.Draw(ourShader);
+
+        pointLight.position = glm::vec3(0, 5, 0);
         ourShader.setVec3("pointLight.position", pointLight.position);
         ourShader.setVec3("pointLight.ambient", pointLight.ambient);
         ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -345,12 +405,49 @@ int main() {
         ourShader.setFloat("pointLight.linear", pointLight.linear);
         ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
         ourShader.setVec3("viewPosition", programState->camera.Position);
-        ourShader.setFloat("material.shininess", 32.0f);
+        ourShader.setFloat("material.shininess", 256.0f);
 
-        // view/projection transformations
+        //Zemlja
+        model = glm::mat4(1.0f);
+        model = glm::rotate(model, (float)glfwGetTime() * 0.6227f, glm::vec3(2, 4, 0));
+        model = glm::translate(model,glm::vec3(5.0f,0.0f+ sin(currentFrame+0.2)*0.2,30.0f));
+        model = glm::scale(model, glm::vec3(0.15f,0.15f,0.15f));    // it's a bit too big for our scene, so scale it down
+        ourShader.setMat4("model", model);
+        Zemlja.Draw(ourShader);
 
-        ourShader.setMat4("projection", projection);
-        ourShader.setMat4("view", view);
+        //Merkur
+        model = glm::mat4(1.0f);
+        model = glm::rotate(model, (float)glfwGetTime() , glm::vec3(0, 1, 0));
+        model = glm::translate(model,glm::vec3(5.0f,0.0f+ sin(currentFrame+0.2)*0.2,10.0f));
+        model = glm::scale(model, glm::vec3(0.05f,0.05f,0.05f));    // it's a bit too big for our scene, so scale it down
+        ourShader.setMat4("model", model);
+        Mercury.Draw(ourShader);
+
+        //Venus
+        model = glm::mat4(1.0f);
+        model = glm::rotate(model, (float)glfwGetTime()*0.7315f , glm::vec3(0, 1, 0));
+        model = glm::translate(model,glm::vec3(5.0f,0.0f+ sin(currentFrame+0.2)*0.2,20.0f));
+        model = glm::scale(model, glm::vec3(0.15f,0.15f,0.15f));    // it's a bit too big for our scene, so scale it down
+        ourShader.setMat4("model", model);
+        Venus.Draw(ourShader);
+
+        //Mars
+        model = glm::mat4(1.0f);
+        model = glm::rotate(model, (float)glfwGetTime() * 0.503f , glm::vec3(0, 1, 0));
+        model = glm::translate(model,glm::vec3(5.0f,0.0f+ sin(currentFrame+0.2)*0.2,40.0f));
+        model = glm::scale(model, glm::vec3(0.075f,0.075f,0.075f));    // it's a bit too big for our scene, so scale it down
+        ourShader.setMat4("model", model);
+        Mars.Draw(ourShader);
+
+        //Moon
+       model = glm::mat4(1.0f);
+        model = glm::rotate(model, (float)glfwGetTime() * 0.6227f, glm::vec3(2, 4, 0));
+        model = glm::translate(model,glm::vec3(5.0f,0.0f+ sin(currentFrame+0.2)*0.2,30.0f));
+       model = glm::scale(model, glm::vec3(0.0375f,0.0375f,0.0375f));    // it's a bit too big for our scene, so scale it down
+       ourShader.setMat4("model", model);
+       Moon.Draw(ourShader);
+
+
 
         // Draw skybox
         glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
@@ -366,13 +463,8 @@ int main() {
         glBindVertexArray(0);
         glDepthFunc(GL_LESS); // set depth function back to default
 
-        // render the loaded model --- will change later
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model,
-                               programState->backpackPosition); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
-        ourShader.setMat4("model", model);
-        ourModel.Draw(ourShader);
+
+
 
 
         if (programState->ImGuiEnabled)
@@ -458,8 +550,8 @@ void DrawImGui(ProgramState *programState) {
         ImGui::Text("Hello text");
         ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
-        ImGui::DragFloat3("Backpack position", (float*)&programState->backpackPosition);
-        ImGui::DragFloat("Backpack scale", &programState->backpackScale, 0.05, 0.1, 4.0);
+        ImGui::DragFloat3("Sun position", (float*)&programState->Sunposition);
+        ImGui::DragFloat("Sun scale", &programState->SunScale, 0.05, 0.1, 4.0);
 
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
