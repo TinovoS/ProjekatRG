@@ -1,15 +1,14 @@
 # Implemented checklist
 - [x] Shaders
 - [x] Textures
-- [ ] Transformations
-- [ ] Coordinate systems & Camera
-- [ ] Advanced lighting
-- [ ] Multiple lights
+- [x] Transformations
+- [x] Coordinate systems & Camera
+- [x] Advanced lighting
+- [x] Multiple lights
 - [x] Model loading
 - [ ] Blending
 - [ ] Face culling
 - [x] Imgui
-- [ ] Geometry shader
 ### A
 - [ ] Frame buffers
 - [x] Cubemaps

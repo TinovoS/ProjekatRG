@@ -41,6 +41,15 @@ float lastY = SCR_HEIGHT / 2.0f;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+
+
+struct DirectLight {
+    glm::vec3 direction;
+    glm::vec3 ambient;
+    glm::vec3 diffuse;
+    glm::vec3 specular;
+};
+
 struct PointLight {
     glm::vec3 position;
     glm::vec3 ambient;
@@ -62,9 +71,9 @@ struct ProgramState {
     glm::vec3 Sunposition = glm::vec3(0.0f);
     float SunScale = 1.0f;
 
-
-
     PointLight pointLight;
+    DirectLight dirLight;
+  //  DirectLight Centar;
     ProgramState()
             : camera(glm::vec3(0.0f, 2.0f, 6.0f)) {}
 
@@ -313,26 +322,19 @@ int main() {
     Moon.SetShaderTextureNamePrefix("material.");
 
     // light later change
+    DirectLight& dirLight = programState->dirLight;
+    dirLight.ambient = glm::vec3(1, 1, 1);
+    dirLight.diffuse = glm::vec3(1.0, 1.0, 1.0);
+    dirLight.specular = glm::vec3(1.0, 1.0, 1.0);
+
     PointLight& pointLight = programState->pointLight;
-    pointLight.position = glm::vec3(0, 5 , 0.0);
-    pointLight.ambient = glm::vec3(1, 1, 1);
-    pointLight.diffuse = glm::vec3(1, 1, 1);
+    pointLight.ambient = glm::vec3(0.4, 0.4, 0.4);
+    pointLight.diffuse = glm::vec3(1.0, 1.0, 1.0);
     pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
 
     pointLight.constant = 1;
-    pointLight.linear = 0.1;
-    pointLight.quadratic = 0.1;
-
-    PointLight& Centar = programState->pointLight;
-    Centar.position = glm::vec3(0, 5 , 0.0);
-    Centar.ambient = glm::vec3(1, 1, 1);
-    Centar.diffuse = glm::vec3(1, 1, 1);
-    Centar.specular = glm::vec3(1.0, 1.0, 1.0);
-
-    Centar.constant = 1;
-    Centar.linear = 0;
-    Centar.quadratic = 0;
-
+    pointLight.linear = 0.005;
+    pointLight.quadratic = 0.001;
 
     skyboxShader.use();
     skyboxShader.setInt("skybox", 0);
@@ -368,16 +370,25 @@ int main() {
         // will change later
         ourShader.use();
 
-        Centar.position = glm::vec3(0, 5, 0);
-        ourShader.setVec3("pointLight.position", Centar.position);
-        ourShader.setVec3("pointLight.ambient", Centar.ambient);
-        ourShader.setVec3("pointLight.diffuse", Centar.diffuse);
-        ourShader.setVec3("pointLight.specular", Centar.specular);
-        ourShader.setFloat("pointLight.constant", Centar.constant);
-        ourShader.setFloat("pointLight.linear", Centar.linear);
-        ourShader.setFloat("pointLight.quadratic", Centar.quadratic);
+
+        dirLight.direction = glm::vec3(-0.2, -1, -0.3);
+        ourShader.setVec3("dirLight.position", dirLight.direction);
+        ourShader.setVec3("dirLight.ambient", dirLight.ambient);
+        ourShader.setVec3("dirLight.diffuse", dirLight.diffuse);
+        ourShader.setVec3("dirLight.specular", dirLight.specular);
+
+
+        pointLight.position = glm::vec3(0, 7, 0);
+        ourShader.setVec3("pointLight.position", pointLight.position);
+        ourShader.setVec3("pointLight.ambient", pointLight.ambient);
+        ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
+        ourShader.setVec3("pointLight.specular", pointLight.specular);
+        ourShader.setFloat("pointLight.constant", pointLight.constant);
+        ourShader.setFloat("pointLight.linear", pointLight.linear);
+        ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
+
         ourShader.setVec3("viewPosition", programState->camera.Position);
-        ourShader.setFloat("material.shininess", 256.0f);
+        ourShader.setFloat("material.shininess", 32.0f);
 
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
@@ -388,7 +399,7 @@ int main() {
 
 
 
-        // render the loaded model --- will change later
+        // render the loaded model
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model,
                                programState->Sunposition); // translate it down so it's at the center of the scene
@@ -396,56 +407,61 @@ int main() {
         ourShader.setMat4("model", model);
         Sunce.Draw(ourShader);
 
-        pointLight.position = glm::vec3(0, 5, 0);
-        ourShader.setVec3("pointLight.position", pointLight.position);
-        ourShader.setVec3("pointLight.ambient", pointLight.ambient);
-        ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
-        ourShader.setVec3("pointLight.specular", pointLight.specular);
-        ourShader.setFloat("pointLight.constant", pointLight.constant);
-        ourShader.setFloat("pointLight.linear", pointLight.linear);
-        ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
-        ourShader.setVec3("viewPosition", programState->camera.Position);
-        ourShader.setFloat("material.shininess", 256.0f);
 
-        //Zemlja
+        dirLight.ambient = glm::vec3(0.01, 0.01, 0.01);
+        dirLight.diffuse = glm::vec3(1.0, 1.0, 1.0);
+        dirLight.specular = glm::vec3(1.0, 1.0, 1.0);
+        ourShader.setVec3("dirLight.position", dirLight.direction);
+        ourShader.setVec3("dirLight.ambient", dirLight.ambient);
+        ourShader.setVec3("dirLight.diffuse", dirLight.diffuse);
+        ourShader.setVec3("dirLight.specular", dirLight.specular);
+
+        //Earth --- numbers that multiply glfgettime in angle are  revolution around the sun when the mercury is 1 so 88days/365 == 0.24...
         model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime() * 0.6227f, glm::vec3(2, 4, 0));
-        model = glm::translate(model,glm::vec3(5.0f,0.0f+ sin(currentFrame+0.2)*0.2,30.0f));
-        model = glm::scale(model, glm::vec3(0.15f,0.15f,0.15f));    // it's a bit too big for our scene, so scale it down
+        model = glm::rotate(model, (float)glfwGetTime()*0.24109589f, glm::vec3(0, 0.6227f*3, 0));
+        model = glm::translate(model,glm::vec3(5.0f,0.0f,30.0f));
+        glm::mat4 glzemlja = model;
+        model = glm::scale(model, glm::vec3(0.15f,0.15f,0.15f));
         ourShader.setMat4("model", model);
         Zemlja.Draw(ourShader);
 
-        //Merkur
+        // Moon -- numbers in rotation 0.6227f*3 mean  one day so if mercury day is lets say faster than earth is 0.6227 of mercury day
         model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime() , glm::vec3(0, 1, 0));
-        model = glm::translate(model,glm::vec3(5.0f,0.0f+ sin(currentFrame+0.2)*0.2,10.0f));
-        model = glm::scale(model, glm::vec3(0.05f,0.05f,0.05f));    // it's a bit too big for our scene, so scale it down
+        model = glm::rotate(model, (float)glfwGetTime() * 0.24109589f, glm::vec3(0, 0.6227f * 3, 0)); // rotate around the Sun
+        model = glm::translate(model, glm::vec3(5.0f, 0.0f, 30.0f)); // translate to the Earth position
+        model = glm::rotate(model, (float)glfwGetTime() * 0.1f, glm::vec3(0, 1, 0)); // rotate around the Earth
+        model = glm::translate(model, glm::vec3(0, 0.0f, 4.0f)); // translate to the Moon position relative to the Earth
+        model = glm::scale(model, glm::vec3(0.0375f, 0.0375f, 0.0375f)); // scale down
+        model = glm::rotate(model, -glm::radians(23.5f), glm::vec3(1.0f, 0.0f, 0.0f)); // tilt the Moon orbit if necessary
+        ourShader.setMat4("model", model * glzemlja);
+        Moon.Draw(ourShader);
+
+
+        //Merkur -- Number on scale are all scaled to earth but earth is not scaled to sun cuz it will be so small
+        model = glm::mat4(1.0f);
+        model = glm::rotate(model, (float)glfwGetTime() , glm::vec3(0, 1*3, 0));
+        model = glm::translate(model,glm::vec3(5.0f,0.0f,10.0f));
+        model = glm::scale(model, glm::vec3(0.05f,0.05f,0.05f));
         ourShader.setMat4("model", model);
         Mercury.Draw(ourShader);
 
         //Venus
         model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime()*0.7315f , glm::vec3(0, 1, 0));
-        model = glm::translate(model,glm::vec3(5.0f,0.0f+ sin(currentFrame+0.2)*0.2,20.0f));
-        model = glm::scale(model, glm::vec3(0.15f,0.15f,0.15f));    // it's a bit too big for our scene, so scale it down
+        model = glm::rotate(model, (float)glfwGetTime()*0.391f , glm::vec3(0, 0.7315f*3, 0));
+        model = glm::translate(model,glm::vec3(5.0f,0.0f,20.0f));
+        model = glm::scale(model, glm::vec3(0.15f,0.15f,0.15f));
         ourShader.setMat4("model", model);
         Venus.Draw(ourShader);
 
         //Mars
         model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime() * 0.503f , glm::vec3(0, 1, 0));
-        model = glm::translate(model,glm::vec3(5.0f,0.0f+ sin(currentFrame+0.2)*0.2,40.0f));
-        model = glm::scale(model, glm::vec3(0.075f,0.075f,0.075f));    // it's a bit too big for our scene, so scale it down
+        model = glm::rotate(model, (float)glfwGetTime() * 0.128093159f , glm::vec3(0, 0.503f*3, 0));
+        model = glm::translate(model,glm::vec3(5.0f,0.0f,40.0f));
+        model = glm::scale(model, glm::vec3(0.075f,0.075f,0.075f));
         ourShader.setMat4("model", model);
         Mars.Draw(ourShader);
 
-        //Moon
-       model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime() * 0.6227f, glm::vec3(2, 4, 0));
-        model = glm::translate(model,glm::vec3(5.0f,0.0f+ sin(currentFrame+0.2)*0.2,30.0f));
-       model = glm::scale(model, glm::vec3(0.0375f,0.0375f,0.0375f));    // it's a bit too big for our scene, so scale it down
-       ourShader.setMat4("model", model);
-       Moon.Draw(ourShader);
+
 
 
 
@@ -552,10 +568,10 @@ void DrawImGui(ProgramState *programState) {
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
         ImGui::DragFloat3("Sun position", (float*)&programState->Sunposition);
         ImGui::DragFloat("Sun scale", &programState->SunScale, 0.05, 0.1, 4.0);
-
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.quadratic", &programState->pointLight.quadratic, 0.05, 0.0, 1.0);
+
         ImGui::End();
     }
 
