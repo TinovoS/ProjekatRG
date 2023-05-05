@@ -369,8 +369,7 @@ int main() {
 
         // will change later
         ourShader.use();
-
-
+        float slowdownrotation= 0.1;
         dirLight.direction = glm::vec3(-0.2, -1, -0.3);
         ourShader.setVec3("dirLight.position", dirLight.direction);
         ourShader.setVec3("dirLight.ambient", dirLight.ambient);
@@ -388,7 +387,7 @@ int main() {
         ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
 
         ourShader.setVec3("viewPosition", programState->camera.Position);
-        ourShader.setFloat("material.shininess", 32.0f);
+        ourShader.setFloat("material.shininess", 16.0f);
 
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
@@ -400,6 +399,7 @@ int main() {
 
 
         // render the loaded model
+        //sun
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model,
                                programState->Sunposition); // translate it down so it's at the center of the scene
@@ -418,8 +418,9 @@ int main() {
 
         //Earth --- numbers that multiply glfgettime in angle are  revolution around the sun when the mercury is 1 so 88days/365 == 0.24...
         model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime()*0.24109589f, glm::vec3(0, 0.6227f*3, 0));
+        model = glm::rotate(model, (float)glfwGetTime()*0.24109589f, glm::vec3(0, 1, 0));
         model = glm::translate(model,glm::vec3(5.0f,0.0f,30.0f));
+        model = glm::rotate(model, (float)glfwGetTime()*0.6227f*slowdownrotation, glm::vec3(0, 1, 0));
         glm::mat4 glzemlja = model;
         model = glm::scale(model, glm::vec3(0.15f,0.15f,0.15f));
         ourShader.setMat4("model", model);
@@ -427,7 +428,7 @@ int main() {
 
         // Moon -- numbers in rotation 0.6227f*3 mean  one day so if mercury day is lets say faster than earth is 0.6227 of mercury day
         model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime() * 0.24109589f, glm::vec3(0, 0.6227f * 3, 0)); // rotate around the Sun
+        model = glm::rotate(model, (float)glfwGetTime() * 0.24109589f, glm::vec3(0, 1, 0)); // rotate around the Sun
         model = glm::translate(model, glm::vec3(5.0f, 0.0f, 30.0f)); // translate to the Earth position
         model = glm::rotate(model, (float)glfwGetTime() * 0.1f, glm::vec3(0, 1, 0)); // rotate around the Earth
         model = glm::translate(model, glm::vec3(0, 0.0f, 4.0f)); // translate to the Moon position relative to the Earth
@@ -439,24 +440,27 @@ int main() {
 
         //Merkur -- Number on scale are all scaled to earth but earth is not scaled to sun cuz it will be so small
         model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime() , glm::vec3(0, 1*3, 0));
+        model = glm::rotate(model, (float)glfwGetTime() , glm::vec3(0, 1, 0));
         model = glm::translate(model,glm::vec3(5.0f,0.0f,10.0f));
+        model = glm::rotate(model, (float)glfwGetTime() *slowdownrotation, glm::vec3(0, 1, 0));
         model = glm::scale(model, glm::vec3(0.05f,0.05f,0.05f));
         ourShader.setMat4("model", model);
         Mercury.Draw(ourShader);
 
         //Venus
         model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime()*0.391f , glm::vec3(0, 0.7315f*3, 0));
+        model = glm::rotate(model, (float)glfwGetTime()*0.391f , glm::vec3(0, 1, 0));
         model = glm::translate(model,glm::vec3(5.0f,0.0f,20.0f));
+        model = glm::rotate(model, 0.7315f*(float)glfwGetTime()*slowdownrotation, glm::vec3(0, 1, 0));
         model = glm::scale(model, glm::vec3(0.15f,0.15f,0.15f));
         ourShader.setMat4("model", model);
         Venus.Draw(ourShader);
 
         //Mars
         model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime() * 0.128093159f , glm::vec3(0, 0.503f*3, 0));
+        model = glm::rotate(model, (float)glfwGetTime() * 0.128093159f , glm::vec3(0, 1, 0));
         model = glm::translate(model,glm::vec3(5.0f,0.0f,40.0f));
+        model = glm::rotate(model, 0.503f*(float)glfwGetTime()*slowdownrotation, glm::vec3(0, 1, 0));
         model = glm::scale(model, glm::vec3(0.075f,0.075f,0.075f));
         ourShader.setMat4("model", model);
         Mars.Draw(ourShader);

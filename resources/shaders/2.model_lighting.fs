@@ -58,8 +58,8 @@ vec3 CalcDirLight(DirectLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 {
-
     vec3 lightDir = normalize(light.position - fragPos);
+
     // diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);
 
@@ -76,9 +76,9 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     vec3 diffuse = light.diffuse * diff * vec3(texture(material.texture_diffuse1, TexCoords));
     vec3 specular = light.specular * spec * vec3(texture(material.texture_specular1, TexCoords));
     ambient *= attenuation;
-    diffuse *= attenuation;
+    diffuse *= attenuation * diff;
     specular *= attenuation;
-    return (ambient +diffuse + specular );
+    return (ambient + diffuse + specular);
 }
 
 
