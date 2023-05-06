@@ -6,8 +6,8 @@
 - [x] Advanced lighting
 - [x] Multiple lights
 - [x] Model loading
-- [ ] Blending
-- [ ] Face culling
+- [x] Blending
+- [x] Face culling
 - [x] Imgui
 ### A
 - [ ] Frame buffers

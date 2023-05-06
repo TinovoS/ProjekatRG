@@ -28,6 +28,8 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 
 unsigned int loadCubemap(vector<std::string> faces);
 
+unsigned int loadTexture(const char *path);
+
 // settings
 const unsigned int SCR_WIDTH = 1600;
 const unsigned int SCR_HEIGHT = 1100;
@@ -278,6 +280,19 @@ int main() {
     // -------------------------
     Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
+    Shader blendShader("resources/shaders/blending.vs", "resources/shaders/blending.fs");
+
+
+    float transparentVertices[] = {
+            // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
+            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+            0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
+            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+
+            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+            1.0f,  0.5f,  0.0f,  1.0f,  0.0f
+    };
 
     // skybox VAO
     unsigned int skyboxVAO, skyboxVBO;
@@ -301,6 +316,22 @@ int main() {
     };
     unsigned int cubemapTexture = loadCubemap(faces);
 
+    // transparent VAO
+    unsigned int transparentVAO, transparentVBO;
+    glGenVertexArrays(1, &transparentVAO);
+    glGenBuffers(1, &transparentVBO);
+    glBindVertexArray(transparentVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glBindVertexArray(0);
+    unsigned int transparentTexture = loadTexture(FileSystem::getPath("resources/textures/planets.png").c_str());
+
+
+
     // load models
     // -----------
     Model Sunce("resources/objects/Sun/Sun.obj");
@@ -322,19 +353,21 @@ int main() {
     Moon.SetShaderTextureNamePrefix("material.");
 
     // light later change
-    DirectLight& dirLight = programState->dirLight;
-    dirLight.ambient = glm::vec3(1, 1, 1);
-    dirLight.diffuse = glm::vec3(1.0, 1.0, 1.0);
-    dirLight.specular = glm::vec3(1.0, 1.0, 1.0);
+
 
     PointLight& pointLight = programState->pointLight;
-    pointLight.ambient = glm::vec3(0.4, 0.4, 0.4);
-    pointLight.diffuse = glm::vec3(1.0, 1.0, 1.0);
-    pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
+    pointLight.position = glm::vec3(0, 7, 0);
 
     pointLight.constant = 1;
     pointLight.linear = 0.005;
     pointLight.quadratic = 0.001;
+
+    DirectLight& dirLight = programState->dirLight;
+    dirLight.direction = glm::vec3(-0.2, -1, -0.3);
+
+
+
+
 
     skyboxShader.use();
     skyboxShader.setInt("skybox", 0);
@@ -368,16 +401,18 @@ int main() {
 
 
         // will change later
+
         ourShader.use();
+
         float slowdownrotation= 0.1;
-        dirLight.direction = glm::vec3(-0.2, -1, -0.3);
-        ourShader.setVec3("dirLight.position", dirLight.direction);
-        ourShader.setVec3("dirLight.ambient", dirLight.ambient);
-        ourShader.setVec3("dirLight.diffuse", dirLight.diffuse);
-        ourShader.setVec3("dirLight.specular", dirLight.specular);
 
+        pointLight.ambient = glm::vec3(1, 1, 1);
+        pointLight.diffuse = glm::vec3(1.0, 1.0, 1.0);
+        pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
+        dirLight.ambient = glm::vec3(1, 1, 1);
+        dirLight.diffuse = glm::vec3(1.0, 1.0, 1.0);
+        dirLight.specular = glm::vec3(1.0, 1.0, 1.0);
 
-        pointLight.position = glm::vec3(0, 7, 0);
         ourShader.setVec3("pointLight.position", pointLight.position);
         ourShader.setVec3("pointLight.ambient", pointLight.ambient);
         ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -385,9 +420,13 @@ int main() {
         ourShader.setFloat("pointLight.constant", pointLight.constant);
         ourShader.setFloat("pointLight.linear", pointLight.linear);
         ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
+        ourShader.setVec3("dirLight.position", dirLight.direction);
+        ourShader.setVec3("dirLight.ambient", dirLight.ambient);
+        ourShader.setVec3("dirLight.diffuse", dirLight.diffuse);
+        ourShader.setVec3("dirLight.specular", dirLight.specular);
 
         ourShader.setVec3("viewPosition", programState->camera.Position);
-        ourShader.setFloat("material.shininess", 16.0f);
+        ourShader.setFloat("material.shininess", 256.0f);
 
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
@@ -395,6 +434,9 @@ int main() {
         glm::mat4 view = programState->camera.GetViewMatrix();
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
+
+        // draw objects
+
 
 
 
@@ -411,10 +453,18 @@ int main() {
         dirLight.ambient = glm::vec3(0.01, 0.01, 0.01);
         dirLight.diffuse = glm::vec3(1.0, 1.0, 1.0);
         dirLight.specular = glm::vec3(1.0, 1.0, 1.0);
+
+        pointLight.ambient = glm::vec3(0.2, 0.2, 0.2);
+        pointLight.diffuse = glm::vec3(1.0, 1.0, 1.0);
+        pointLight.specular = glm::vec3(0.7, 0.7, 0.7);
         ourShader.setVec3("dirLight.position", dirLight.direction);
         ourShader.setVec3("dirLight.ambient", dirLight.ambient);
         ourShader.setVec3("dirLight.diffuse", dirLight.diffuse);
         ourShader.setVec3("dirLight.specular", dirLight.specular);
+        ourShader.setVec3("pointLight.ambient", pointLight.ambient);
+        ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
+        ourShader.setVec3("pointLight.specular", pointLight.specular);
+        ourShader.setFloat("material.shininess", 2.0f);
 
         //Earth --- numbers that multiply glfgettime in angle are  revolution around the sun when the mercury is 1 so 88days/365 == 0.24...
         model = glm::mat4(1.0f);
@@ -465,8 +515,24 @@ int main() {
         ourShader.setMat4("model", model);
         Mars.Draw(ourShader);
 
+        glDisable(GL_CULL_FACE);
+
+        // planets -- discarding fragments
+        blendShader.use();
+        blendShader.setMat4("projection", projection);
+        blendShader.setMat4("view", view);
+        glBindVertexArray(transparentVAO);
+        glBindTexture(GL_TEXTURE_2D, transparentTexture);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0, 30.0f, 0));
+        model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0, 1, 0));
+        model = glm::scale(model, glm::vec3(15,15,15));
+        blendShader.setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
 
 
         // Draw skybox
@@ -633,6 +699,42 @@ unsigned int loadCubemap(vector<std::string> faces)
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
+}
+unsigned int loadTexture(char const * path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+    }
 
     return textureID;
 }
