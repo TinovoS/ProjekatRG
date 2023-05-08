@@ -317,11 +317,11 @@ int main() {
     unsigned int cubemapTexture = loadCubemap(faces);
 
     // transparent VAO
-    unsigned int transparentVAO, transparentVBO;
-    glGenVertexArrays(1, &transparentVAO);
-    glGenBuffers(1, &transparentVBO);
-    glBindVertexArray(transparentVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
+    unsigned int planetsVAO, planetsVBO;
+    glGenVertexArrays(1, &planetsVAO);
+    glGenBuffers(1, &planetsVBO);
+    glBindVertexArray(planetsVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, planetsVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
@@ -365,6 +365,20 @@ int main() {
     DirectLight& dirLight = programState->dirLight;
     dirLight.direction = glm::vec3(-0.2, -1, -0.3);
 
+    float slowdownrotation= 0.4;
+
+    //year
+    float mercurydays=88.0;
+    float venusdays=225.0;
+    float earthdays=365.0;
+    float marsdays=687.0;
+
+    //days
+    float mercuryhours=1408.0;
+    float venushours=5832.0;
+    float earthhours=24.0;
+    float marshours=25.0;
+
 
 
 
@@ -404,7 +418,6 @@ int main() {
 
         ourShader.use();
 
-        float slowdownrotation= 0.1;
 
         pointLight.ambient = glm::vec3(1, 1, 1);
         pointLight.diffuse = glm::vec3(1.0, 1.0, 1.0);
@@ -466,51 +479,51 @@ int main() {
         ourShader.setVec3("pointLight.specular", pointLight.specular);
         ourShader.setFloat("material.shininess", 2.0f);
 
-        //Earth --- numbers that multiply glfgettime in angle are  revolution around the sun when the mercury is 1 so 88days/365 == 0.24...
+        //Earth
         model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime()*0.24109589f, glm::vec3(0, 1, 0));
+        model = glm::rotate(model, (float)glfwGetTime()*mercurydays/earthdays, glm::vec3(0, 1, 0));
         model = glm::translate(model,glm::vec3(5.0f,0.0f,30.0f));
-        model = glm::rotate(model, (float)glfwGetTime()*0.6227f*slowdownrotation, glm::vec3(0, 1, 0));
+        model = glm::rotate(model, (float)glfwGetTime()*earthhours/earthhours*slowdownrotation, glm::vec3(0, 1, 0));
         glm::mat4 glzemlja = model;
         model = glm::scale(model, glm::vec3(0.15f,0.15f,0.15f));
         ourShader.setMat4("model", model);
         Zemlja.Draw(ourShader);
 
-        // Moon -- numbers in rotation 0.6227f*3 mean  one day so if mercury day is lets say faster than earth is 0.6227 of mercury day
+        // Moon
         model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime() * 0.24109589f, glm::vec3(0, 1, 0)); // rotate around the Sun
+        model = glm::rotate(model, (float)glfwGetTime() * mercurydays/earthdays, glm::vec3(0, 1, 0)); // rotate around the Sun
         model = glm::translate(model, glm::vec3(5.0f, 0.0f, 30.0f)); // translate to the Earth position
-        model = glm::rotate(model, (float)glfwGetTime() * 0.1f, glm::vec3(0, 1, 0)); // rotate around the Earth
+        model = glm::rotate(model, (float)glfwGetTime() * slowdownrotation, glm::vec3(0, 1, 0)); // rotate around the Earth
         model = glm::translate(model, glm::vec3(0, 0.0f, 4.0f)); // translate to the Moon position relative to the Earth
         model = glm::scale(model, glm::vec3(0.0375f, 0.0375f, 0.0375f)); // scale down
-        model = glm::rotate(model, -glm::radians(23.5f), glm::vec3(1.0f, 0.0f, 0.0f)); // tilt the Moon orbit if necessary
+     //   model = glm::rotate(model, -glm::radians(23.5f), glm::vec3(1.0f, 0.0f, 0.0f)); // tilt the Moon orbit if necessary
         ourShader.setMat4("model", model * glzemlja);
         Moon.Draw(ourShader);
 
 
         //Merkur -- Number on scale are all scaled to earth but earth is not scaled to sun cuz it will be so small
         model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime() , glm::vec3(0, 1, 0));
+        model = glm::rotate(model, (float)glfwGetTime()*mercurydays/mercurydays , glm::vec3(0, 1, 0));
         model = glm::translate(model,glm::vec3(5.0f,0.0f,10.0f));
-        model = glm::rotate(model, (float)glfwGetTime() *slowdownrotation, glm::vec3(0, 1, 0));
+        model = glm::rotate(model, (float)glfwGetTime()*earthhours/mercuryhours*slowdownrotation, glm::vec3(0, 1, 0));
         model = glm::scale(model, glm::vec3(0.05f,0.05f,0.05f));
         ourShader.setMat4("model", model);
         Mercury.Draw(ourShader);
 
         //Venus
         model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime()*0.391f , glm::vec3(0, 1, 0));
+        model = glm::rotate(model, (float)glfwGetTime()*mercurydays/venusdays , glm::vec3(0, 1, 0));
         model = glm::translate(model,glm::vec3(5.0f,0.0f,20.0f));
-        model = glm::rotate(model, 0.7315f*(float)glfwGetTime()*slowdownrotation, glm::vec3(0, 1, 0));
+        model = glm::rotate(model, earthhours/venushours*(float)glfwGetTime()*slowdownrotation, glm::vec3(0, 1, 0));
         model = glm::scale(model, glm::vec3(0.15f,0.15f,0.15f));
         ourShader.setMat4("model", model);
         Venus.Draw(ourShader);
 
         //Mars
         model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime() * 0.128093159f , glm::vec3(0, 1, 0));
+        model = glm::rotate(model, (float)glfwGetTime() * mercurydays/marsdays , glm::vec3(0, 1, 0));
         model = glm::translate(model,glm::vec3(5.0f,0.0f,40.0f));
-        model = glm::rotate(model, 0.503f*(float)glfwGetTime()*slowdownrotation, glm::vec3(0, 1, 0));
+        model = glm::rotate(model, earthhours/marshours*(float)glfwGetTime()*slowdownrotation, glm::vec3(0, 1, 0));
         model = glm::scale(model, glm::vec3(0.075f,0.075f,0.075f));
         ourShader.setMat4("model", model);
         Mars.Draw(ourShader);
@@ -521,7 +534,7 @@ int main() {
         blendShader.use();
         blendShader.setMat4("projection", projection);
         blendShader.setMat4("view", view);
-        glBindVertexArray(transparentVAO);
+        glBindVertexArray(planetsVAO);
         glBindTexture(GL_TEXTURE_2D, transparentTexture);
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0, 30.0f, 0));
