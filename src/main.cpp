@@ -29,10 +29,11 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 unsigned int loadCubemap(vector<std::string> faces);
 
 unsigned int loadTexture(const char *path);
+void renderQuad();
 
 // settings
 const unsigned int SCR_WIDTH = 1600;
-const unsigned int SCR_HEIGHT = 1100;
+const unsigned int SCR_HEIGHT = 900;
 bool firstMouse = true;
 
 // camera
@@ -69,6 +70,7 @@ struct ProgramState {
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
 
+    float exposure = 2.0f;
 
     glm::vec3 Sunposition = glm::vec3(0.0f);
     float SunScale = 1.0f;
@@ -111,6 +113,7 @@ void ProgramState::LoadFromFile(std::string filename) {
            >> camera.Front.x
            >> camera.Front.y
            >> camera.Front.z;
+
     }
 }
 
@@ -281,6 +284,7 @@ int main() {
     Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
     Shader blendShader("resources/shaders/blending.vs", "resources/shaders/blending.fs");
+    Shader hdrShader("resources/shaders/hdr.vs", "resources/shaders/hdr.fs");
 
 
     float transparentVertices[] = {
@@ -330,6 +334,31 @@ int main() {
     glBindVertexArray(0);
     unsigned int transparentTexture = loadTexture(FileSystem::getPath("resources/textures/planets.png").c_str());
 
+    // setting up HDR
+    // --------------------------
+    // floating point framebuffer
+    unsigned int hdrFBO;
+    glGenFramebuffers(1, &hdrFBO);
+    // floating point color buffer
+    unsigned int colorBuffer;
+    glGenTextures(1, &colorBuffer);
+    glBindTexture(GL_TEXTURE_2D, colorBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // depth buffer (render buffer)
+    unsigned int rboDepth;
+    glGenRenderbuffers(1, &rboDepth);
+    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+    // attach buffers
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "Framebuffer not complete!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
 
     // load models
@@ -359,8 +388,8 @@ int main() {
     pointLight.position = glm::vec3(0, 7, 0);
 
     pointLight.constant = 1;
-    pointLight.linear = 0.005;
-    pointLight.quadratic = 0.001;
+    pointLight.linear = 0.004;
+    pointLight.quadratic = 0.003;
 
     DirectLight& dirLight = programState->dirLight;
     dirLight.direction = glm::vec3(-0.2, -1, -0.3);
@@ -393,6 +422,7 @@ int main() {
 
 
 
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window)) {
@@ -413,7 +443,11 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
+        glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
+         hdrShader.use();
         // will change later
 
         ourShader.use();
@@ -439,7 +473,7 @@ int main() {
         ourShader.setVec3("dirLight.specular", dirLight.specular);
 
         ourShader.setVec3("viewPosition", programState->camera.Position);
-        ourShader.setFloat("material.shininess", 256.0f);
+        ourShader.setFloat("material.shininess", 512.0f);
 
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
@@ -455,21 +489,24 @@ int main() {
 
         // render the loaded model
         //sun
+        glDisable(GL_CULL_FACE);
+
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model,
                                programState->Sunposition); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(1,1,1));    // it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", model);
         Sunce.Draw(ourShader);
-
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
 
         dirLight.ambient = glm::vec3(0.01, 0.01, 0.01);
         dirLight.diffuse = glm::vec3(1.0, 1.0, 1.0);
         dirLight.specular = glm::vec3(1.0, 1.0, 1.0);
 
-        pointLight.ambient = glm::vec3(0.2, 0.2, 0.2);
-        pointLight.diffuse = glm::vec3(1.0, 1.0, 1.0);
-        pointLight.specular = glm::vec3(0.7, 0.7, 0.7);
+        pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
+        pointLight.diffuse = glm::vec3(1, 1, 1);
+        pointLight.specular = glm::vec3(0.4, 0.4, 0.4);
         ourShader.setVec3("dirLight.position", dirLight.direction);
         ourShader.setVec3("dirLight.ambient", dirLight.ambient);
         ourShader.setVec3("dirLight.diffuse", dirLight.diffuse);
@@ -564,6 +601,16 @@ int main() {
 
 
 
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        hdrShader.use();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, colorBuffer);
+        hdrShader.setFloat("exposure", programState->exposure);
+        renderQuad();
+
+
+
 
 
         if (programState->ImGuiEnabled)
@@ -651,6 +698,8 @@ void DrawImGui(ProgramState *programState) {
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
         ImGui::DragFloat3("Sun position", (float*)&programState->Sunposition);
         ImGui::DragFloat("Sun scale", &programState->SunScale, 0.05, 0.1, 4.0);
+        ImGui::DragFloat("HDR exposure parameter", &programState->exposure, 0.1, 0.0, 10.0);
+
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.quadratic", &programState->pointLight.quadratic, 0.05, 0.0, 1.0);
@@ -750,4 +799,33 @@ unsigned int loadTexture(char const * path)
     }
 
     return textureID;
+}
+
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+void renderQuad()
+{
+    if (quadVAO == 0)
+    {
+        float quadVertices[] = {
+                // positions        // texture Coords
+                -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+                -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+                1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+                1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+        };
+        // setup plane VAO
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    }
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
 }

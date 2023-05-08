@@ -18,6 +18,6 @@
 ### B
 - [ ] Point shadows
 - [ ] Normal mapping, Parallax mapping
-- [ ] HDR, Bloom
+- [x] HDR
 - [ ] Deffered Shading
 - [ ] SSAO
