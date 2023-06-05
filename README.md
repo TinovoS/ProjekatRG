@@ -30,7 +30,7 @@ https://drive.google.com/drive/folders/1dCGc94mQfhIDogRKf2SytGx3pBqUEabm?usp=sha
 # Short Video 
 https://www.youtube.com/watch?v=DnGFiGCwqJo
 
-#Move List 
+# Move List 
 WASD-Forward/Left/Back/Right
 Mouse Scroll
 
