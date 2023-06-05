@@ -25,3 +25,12 @@
 ----------------------------------
 U sledecem linku se nalaze objekti koje sam koristio u projektu:
 https://drive.google.com/drive/folders/1dCGc94mQfhIDogRKf2SytGx3pBqUEabm?usp=sharing
+
+
+# Short Video 
+https://www.youtube.com/watch?v=DnGFiGCwqJo
+
+#Move List 
+WASD-Forward/Left/Back/Right
+Mouse Scroll
+
