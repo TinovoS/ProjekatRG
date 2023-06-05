@@ -320,7 +320,7 @@ int main() {
     };
     unsigned int cubemapTexture = loadCubemap(faces);
 
-    // transparent VAO
+    // planets VAO
     unsigned int planetsVAO, planetsVBO;
     glGenVertexArrays(1, &planetsVAO);
     glGenBuffers(1, &planetsVBO);
@@ -334,23 +334,24 @@ int main() {
     glBindVertexArray(0);
     unsigned int transparentTexture = loadTexture(FileSystem::getPath("resources/textures/planets.png").c_str());
 
-    // setting up HDR
-    // --------------------------
-    // floating point framebuffer
+    // setting the HDR
+
+
     unsigned int hdrFBO;
     glGenFramebuffers(1, &hdrFBO);
-    // floating point color buffer
+
     unsigned int colorBuffer;
     glGenTextures(1, &colorBuffer);
     glBindTexture(GL_TEXTURE_2D, colorBuffer);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // depth buffer (render buffer)
+    // render buffer
     unsigned int rboDepth;
     glGenRenderbuffers(1, &rboDepth);
     glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+
     // attach buffers
     glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
@@ -380,8 +381,6 @@ int main() {
 
     Model Moon("resources/objects/Moon/Moon.obj");
     Moon.SetShaderTextureNamePrefix("material.");
-
-    // light later change
 
 
     PointLight& pointLight = programState->pointLight;
@@ -482,11 +481,6 @@ int main() {
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
-        // draw objects
-
-
-
-
         // render the loaded model
         //sun
         glDisable(GL_CULL_FACE);
@@ -528,17 +522,16 @@ int main() {
 
         // Moon
         model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime() * mercurydays/earthdays, glm::vec3(0, 1, 0)); // rotate around the Sun
-        model = glm::translate(model, glm::vec3(5.0f, 0.0f, 30.0f)); // translate to the Earth position
-        model = glm::rotate(model, (float)glfwGetTime() * slowdownrotation, glm::vec3(0, 1, 0)); // rotate around the Earth
-        model = glm::translate(model, glm::vec3(0, 0.0f, 4.0f)); // translate to the Moon position relative to the Earth
+        model = glm::rotate(model, (float)glfwGetTime() * mercurydays/earthdays, glm::vec3(0, 1, 0)); // rotate around Sun
+        model = glm::translate(model, glm::vec3(5.0f, 0.0f, 30.0f)); // translate to the Earth
+        model = glm::rotate(model, (float)glfwGetTime() * slowdownrotation, glm::vec3(0, 1, 0)); // rotate around Earth
+        model = glm::translate(model, glm::vec3(0, 0.0f, 4.0f)); // translate to the Moon position
         model = glm::scale(model, glm::vec3(0.0375f, 0.0375f, 0.0375f)); // scale down
-     //   model = glm::rotate(model, -glm::radians(23.5f), glm::vec3(1.0f, 0.0f, 0.0f)); // tilt the Moon orbit if necessary
         ourShader.setMat4("model", model * glzemlja);
         Moon.Draw(ourShader);
 
 
-        //Merkur -- Number on scale are all scaled to earth but earth is not scaled to sun cuz it will be so small
+        //Merkur
         model = glm::mat4(1.0f);
         model = glm::rotate(model, (float)glfwGetTime()*mercurydays/mercurydays , glm::vec3(0, 1, 0));
         model = glm::translate(model,glm::vec3(5.0f,0.0f,10.0f));
@@ -699,7 +692,6 @@ void DrawImGui(ProgramState *programState) {
         ImGui::DragFloat3("Sun position", (float*)&programState->Sunposition);
         ImGui::DragFloat("Sun scale", &programState->SunScale, 0.05, 0.1, 4.0);
         ImGui::DragFloat("HDR exposure parameter", &programState->exposure, 0.1, 0.0, 10.0);
-
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.quadratic", &programState->pointLight.quadratic, 0.05, 0.0, 1.0);

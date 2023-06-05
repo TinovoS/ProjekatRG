@@ -21,3 +21,7 @@
 - [x] HDR
 - [ ] Deffered Shading
 - [ ] SSAO
+
+----------------------------------
+U sledecem linku se nalaze objekti koje sam koristio u projektu:
+https://drive.google.com/drive/folders/1dCGc94mQfhIDogRKf2SytGx3pBqUEabm?usp=sharing
